@@ -4,6 +4,7 @@ import java.util.Date;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import br.com.cotiinformatica.components.JwtTokenComponent;
@@ -14,6 +15,7 @@ import br.com.cotiinformatica.dtos.AutenticarUsuarioResponseDto;
 import br.com.cotiinformatica.dtos.CriarUsuarioRequestDto;
 import br.com.cotiinformatica.dtos.CriarUsuarioResponseDto;
 import br.com.cotiinformatica.dtos.MensagemUsuarioDto;
+import br.com.cotiinformatica.dtos.ObterDadosUsuarioResponseDto;
 import br.com.cotiinformatica.entities.Usuario;
 import br.com.cotiinformatica.repositories.UsuarioRepository;
 
@@ -31,6 +33,9 @@ public class UsuarioService {
 	
 	@Autowired
 	private RabbitMQProducerComponent rabbitMQProducerComponent;
+	
+	@Value("${jwt.expiration}")
+	private Integer expiration;
 	
 	public CriarUsuarioResponseDto criar(CriarUsuarioRequestDto request) throws Exception {
 		
@@ -69,12 +74,31 @@ public class UsuarioService {
 		if (usuario == null)
 			throw new IllegalAccessException("Acesso negado. Usuário não encontrado.");
 		
+		Date dataAtual = new Date();
+
 		AutenticarUsuarioResponseDto response = new AutenticarUsuarioResponseDto();
 		response.setId(usuario.getId());
 		response.setNome(usuario.getNome());
 		response.setEmail(usuario.getEmail());
 		response.setDataHoraAcesso(new Date());
 		response.setAccessToken(jwtTokenComponent.generateToken(usuario));
+		response.setDataHoraAcesso(dataAtual);
+		response.setDataHoraExpiracao(new Date(dataAtual.getTime() + expiration));		
+		return response;
+	}
+	
+	// Serviço para consultar e retornar os dados dos usuários através do email
+	public ObterDadosUsuarioResponseDto obterDados(String email) throws Exception {
+		
+		Usuario usuario = usuarioRepository.findByEmail(email);
+		
+		if (usuario == null)
+			throw new IllegalAccessException("Acesso negado. Usuário não encontrado.");
+		
+		ObterDadosUsuarioResponseDto response = new ObterDadosUsuarioResponseDto();
+		response.setId(usuario.getId());
+		response.setNome(usuario.getNome());
+		response.setEmail(usuario.getEmail());
 		
 		return response;
 	}
